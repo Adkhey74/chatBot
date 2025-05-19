@@ -4,7 +4,11 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
 use App\Repository\DealershipRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use App\Entity\Appointment;
+
 
 #[ORM\Entity(repositoryClass: DealershipRepository::class)]
 #[ApiResource]
@@ -32,6 +36,10 @@ class Dealership
 
     #[ORM\Column]
     private ?float $longitude = null;
+
+
+    #[ORM\OneToMany(mappedBy: 'dealership', targetEntity: Appointment::class)]
+    private Collection $appointments;
 
     public function getId(): ?int
     {
@@ -108,5 +116,10 @@ class Dealership
         $this->longitude = $longitude;
 
         return $this;
+    }
+
+    public function getAppointments(): Collection
+    {
+        return $this->appointments;
     }
 }

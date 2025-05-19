@@ -6,6 +6,9 @@ use ApiPlatform\Metadata\ApiResource;
 use App\Repository\VehicleRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use App\Entity\Driver;
 
 #[ORM\Entity(repositoryClass: VehicleRepository::class)]
 #[ApiResource]
@@ -33,6 +36,9 @@ class Vehicle
 
     #[ORM\Column]
     private ?int $mileage = null;
+
+    #[ORM\ManyToMany(targetEntity: Driver::class, mappedBy: 'vehicles')]
+    private Collection $drivers;
 
     public function getId(): ?int
     {
@@ -108,6 +114,29 @@ class Vehicle
     {
         $this->mileage = $mileage;
 
+        return $this;
+    }
+    public function getDrivers(): Collection
+    {
+        return $this->drivers;
+    }
+    
+    public function addDriver(Driver $driver): static
+    {
+        if (!$this->drivers->contains($driver)) {
+            $this->drivers[] = $driver;
+            $driver->addVehicle($this); // synchronise les deux côtés
+        }
+    
+        return $this;
+    }
+    
+    public function removeDriver(Driver $driver): static
+    {
+        if ($this->drivers->removeElement($driver)) {
+            $driver->removeVehicle($this); // synchronise les deux côtés
+        }
+    
         return $this;
     }
 }
