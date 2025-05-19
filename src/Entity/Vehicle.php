@@ -9,36 +9,58 @@ use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use App\Entity\Driver;
+use App\Entity\User;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: VehicleRepository::class)]
+#[ApiResource(normalizationContext: ['groups' => ['vehicle:read']])]
+
 #[ApiResource]
 class Vehicle
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['vehicle:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['vehicle:read'])]
     private ?string $brand = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['vehicle:read'])]
     private ?string $model = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['vehicle:read'])]
     private ?string $registrationNumber = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['vehicle:read'])]
     private ?string $vin = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
+    #[Groups(['vehicle:read'])]
     private ?\DateTime $firstRegistrationDate = null;
 
     #[ORM\Column]
+    #[Groups(['vehicle:read'])]
     private ?int $mileage = null;
 
     #[ORM\ManyToMany(targetEntity: Driver::class, mappedBy: 'vehicles')]
+    #[Groups(['vehicle:read'])]
     private Collection $drivers;
+
+    #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'vehicles')]
+    #[Groups(['vehicle:read'])]
+    private Collection $users;
+
+    public function __construct()
+    {
+        $this->drivers = new ArrayCollection();
+        $this->users = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -53,7 +75,6 @@ class Vehicle
     public function setBrand(string $brand): static
     {
         $this->brand = $brand;
-
         return $this;
     }
 
@@ -65,7 +86,6 @@ class Vehicle
     public function setModel(string $model): static
     {
         $this->model = $model;
-
         return $this;
     }
 
@@ -77,7 +97,6 @@ class Vehicle
     public function setRegistrationNumber(string $registrationNumber): static
     {
         $this->registrationNumber = $registrationNumber;
-
         return $this;
     }
 
@@ -89,7 +108,6 @@ class Vehicle
     public function setVin(string $vin): static
     {
         $this->vin = $vin;
-
         return $this;
     }
 
@@ -101,7 +119,6 @@ class Vehicle
     public function setFirstRegistrationDate(\DateTime $firstRegistrationDate): static
     {
         $this->firstRegistrationDate = $firstRegistrationDate;
-
         return $this;
     }
 
@@ -113,30 +130,54 @@ class Vehicle
     public function setMileage(int $mileage): static
     {
         $this->mileage = $mileage;
-
         return $this;
     }
+
     public function getDrivers(): Collection
     {
         return $this->drivers;
     }
-    
+
     public function addDriver(Driver $driver): static
     {
         if (!$this->drivers->contains($driver)) {
             $this->drivers[] = $driver;
-            $driver->addVehicle($this); // synchronise les deux côtés
+            $driver->addVehicle($this);
         }
-    
+
         return $this;
     }
-    
+
     public function removeDriver(Driver $driver): static
     {
         if ($this->drivers->removeElement($driver)) {
-            $driver->removeVehicle($this); // synchronise les deux côtés
+            $driver->removeVehicle($this);
         }
-    
+
+        return $this;
+    }
+
+    public function getUsers(): Collection
+    {
+        return $this->users;
+    }
+
+    public function addUser(User $user): static
+    {
+        if (!$this->users->contains($user)) {
+            $this->users[] = $user;
+            $user->addVehicle($this);
+        }
+
+        return $this;
+    }
+
+    public function removeUser(User $user): static
+    {
+        if ($this->users->removeElement($user)) {
+            $user->removeVehicle($this);
+        }
+
         return $this;
     }
 }

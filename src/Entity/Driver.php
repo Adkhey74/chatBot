@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use App\Entity\Vehicle;
+use App\Entity\User;
 
 #[ORM\Entity(repositoryClass: DriverRepository::class)]
 #[ApiResource]
@@ -29,6 +30,10 @@ class Driver
 
     #[ORM\ManyToMany(targetEntity: Vehicle::class, inversedBy: 'drivers')]
     private Collection $vehicles;
+
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'drivers')]
+    #[ORM\JoinColumn(nullable: false)] // ← ou true si le driver peut ne pas avoir de user au début
+    private ?User $user = null;
 
     public function getId(): ?int
     {
@@ -91,6 +96,16 @@ class Driver
             $vehicle->removeDriver($this); // synchronise les deux côtés
         }
     
+        return $this;
+    }
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+    
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
         return $this;
     }
 }
