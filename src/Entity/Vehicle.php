@@ -138,6 +138,9 @@ class Vehicle
         return $this->drivers;
     }
 
+
+
+
     public function addDriver(Driver $driver): static
     {
         if (!$this->drivers->contains($driver)) {
@@ -145,14 +148,21 @@ class Vehicle
             $driver->addVehicle($this);
         }
 
+
+
+
         return $this;
     }
+
+
+
 
     public function removeDriver(Driver $driver): static
     {
         if ($this->drivers->removeElement($driver)) {
             $driver->removeVehicle($this);
         }
+
 
         return $this;
     }
@@ -169,6 +179,7 @@ class Vehicle
             $user->addVehicle($this);
         }
 
+
         return $this;
     }
 
@@ -177,6 +188,7 @@ class Vehicle
         if ($this->users->removeElement($user)) {
             $user->removeVehicle($this);
         }
+
 
         return $this;
     }
