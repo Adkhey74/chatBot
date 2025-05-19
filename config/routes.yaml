@@ -3,3 +3,9 @@ controllers:
         path: ../src/Controller/
         namespace: App\Controller
     type: attribute
+
+
+dialogflow_webhook:
+  path: /webhook/dialogflow
+  controller: App\Controller\DialogflowWebhookController::handle
+  methods: [POST]
