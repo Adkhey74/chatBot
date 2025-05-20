@@ -20,7 +20,7 @@ class AutoSetUserProcessor implements ProcessorInterface
 
         public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): mixed
     {
-        if (!\is_object($data) || $operation->getMethod() !== 'POST') {
+        if (!\is_object($data) || $operation->getMethod() !== 'POST' && (!method_exists($data, 'setUser') || !method_exists($data, 'addUser'))) {
             return $this->processor->process($data, $operation, $uriVariables, $context);
         }
 
