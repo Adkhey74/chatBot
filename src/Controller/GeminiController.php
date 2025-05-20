@@ -7,14 +7,47 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 class GeminiController extends AbstractController
 {
   private HttpClientInterface $httpClient;
+  private array $services;
+  private ParameterBagInterface $params;
 
-  public function __construct(HttpClientInterface $httpClient)
+  public function __construct(HttpClientInterface $httpClient, ParameterBagInterface $params)
   {
     $this->httpClient = $httpClient;
+    $this->params = $params;
+    $this->services = $this->loadServicesFromCsv();
+  }
+
+  private function loadServicesFromCsv(): array
+  {
+    $services = [];
+    $csvPath = $this->params->get('kernel.project_dir') . '/data/carOperation.csv';
+
+    if (($handle = fopen($csvPath, "r")) !== FALSE) {
+      // Skip header row
+      fgetcsv($handle, 1000, ",");
+
+      while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+        if (isset($data[0], $data[1])) {
+          $services[] = [
+            'id' => $data[0],
+            'name' => $data[1],
+            'category' => $data[2],
+            'additionnal_help' => $data[3],
+            'additionnal_comment' => $data[4],
+            'time_unit' => $data[5],
+            'price' => $data[6]
+          ];
+        }
+      }
+      fclose($handle);
+    }
+
+    return $services;
   }
 
   /**
@@ -26,28 +59,16 @@ class GeminiController extends AbstractController
   {
     $data     = json_decode($request->getContent(), true);
     $userText = trim($data['text'] ?? '');
-    $context   = "Tu es un assistant virtuel spécialisé dans la prise de rendez-vous et la proposition de services pour un atelier automobile.  
-Voici la liste des opérations disponibles :  
-42. Rendez-vous carrosserie  
-43. Réparation impact pare-brise  
-44. Service Embrayage  
-45. Service recherche de panne diagnostic  
-46. Remplacement de pare-brise  
-47. Teinte des vitres  
-48. Service bougies d'allumage  
-49. Service nettoyage climatisation  
-50. Service Essuie-glaces avant  
-51. Service Essuie-glaces arrière  
-52. Service recharge de climatisation R134A  
-53. Service recharge de climatisation R1234yf  
-54. Service climatisation  
-55. Service désodorisant climatisation  
-56. Demande de rappel  
-57. Passage au banc de diagnostic  
 
-Instructions:  
-- Si l'utilisateur demande un de ces services, répond avec le nom exact de l'opération.
-- Si l'utilisateur demande autre chose, répond que ce service n'est pas proposé.";
+    // Construire le contexte avec les services du CSV
+    $context = "Tu es un assistant virtuel spécialisé dans la prise de rendez-vous et la proposition de services pour un atelier automobile.\n\n";
+    $context .= "Voici la liste des opérations disponibles :\n";
+    foreach ($this->services as $index => $service) {
+      $context .= ($index + 1) . ". " . $service['name'] . " (" . $service['category'] . ")\n";
+    }
+    $context .= "\nInstructions:\n";
+    $context .= "- Si l'utilisateur demande un de ces services, répond avec le nom exact de l'opération.\n";
+    $context .= "- Si l'utilisateur demande autre chose, répond que ce service n'est pas proposé.";
 
     if ('' === trim($userText)) {
       return $this->json([
@@ -82,29 +103,16 @@ Instructions:
       $responseText = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
       // Vérifier si la réponse correspond à un service de la liste
-      $services = [
-        'Rendez-vous carrosserie',
-        'Réparation impact pare-brise',
-        'Service Embrayage',
-        'Service recherche de panne diagnostic',
-        'Remplacement de pare-brise',
-        'Teinte des vitres',
-        'Service bougies d\'allumage',
-        'Service nettoyage climatisation',
-        'Service Essuie-glaces avant',
-        'Service Essuie-glaces arrière',
-        'Service recharge de climatisation R134A',
-        'Service recharge de climatisation R1234yf',
-        'Service climatisation',
-        'Service désodorisant climatisation',
-        'Demande de rappel',
-        'Passage au banc de diagnostic'
-      ];
-
-      $isService = false;
-      foreach ($services as $service) {
-        if (stripos($responseText, $service) !== false) {
-          return $this->json(['operation' => $service]);
+      foreach ($this->services as $service) {
+        if (stripos($responseText, $service['name']) !== false) {
+          return $this->json([
+            'operation' => $service['name'],
+            'category' => $service['category'],
+            'additionnal_help' => $service['additionnal_help'],
+            'additionnal_comment' => $service['additionnal_comment'],
+            'time_unit' => $service['time_unit'],
+            'price' => $service['price']
+          ]);
         }
       }
 
