@@ -12,7 +12,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class VehicleNotDriversController extends AbstractController
 {
     #[Route('/api/vehicle/{id}/not-drivers', name: 'vehicle_not_drivers', methods: ['GET'])]
-    public function __invoke(Vehicle $vehicle,Security $security): JsonResponse
+    public function __invoke(Vehicle $vehicle, Security $security): JsonResponse
     {
         $user = $security->getUser();
 
@@ -33,9 +33,6 @@ class VehicleNotDriversController extends AbstractController
             });
         });
 
-        // $notDrivers = array_diff($user->getDrivers()->toArray(), $vehicle->getDrivers()->toArray());
-        
-        
-        return $this->json($notDrivers, 200, [], ['groups' => ['driver:read']]);
+        return $this->json(array_values($notDrivers->toArray()), 200, [], ['groups' => ['driver:read']]);
     }
 }
