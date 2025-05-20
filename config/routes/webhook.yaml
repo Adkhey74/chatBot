@@ -1,0 +1,4 @@
+dialogflow_webhook:
+  path: /webhook/dialogflow
+  controller: App\Controller\Api\DialogflowWebhookController::handle
+  methods: [POST]
