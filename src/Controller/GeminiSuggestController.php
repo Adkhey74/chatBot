@@ -25,7 +25,7 @@ class GeminiSuggestController extends AbstractController
     private function loadServicesFromCsv(): array
     {
         $services = [];
-        $csvPath = $this->params->get('kernel.project_dir') . '/data/carOperation.csv';
+        $csvPath = $this->params->get('kernel.project_dir') . '/data/iaData.csv';
 
         if (($handle = fopen($csvPath, "r")) !== false) {
             fgetcsv($handle); // skip header
@@ -51,21 +51,41 @@ class GeminiSuggestController extends AbstractController
         $year = $vehicule['year'] ?? date('Y');
         $ageMonths = (date('Y') - $year) * 12;
 
-        $matches = [];
+        $validServices = [];
 
         foreach ($this->services as $service) {
             $name = strtolower($service['name']);
 
-            if (preg_match('/(\d+)[ ]*km/i', $name, $kmMatch) && $kmMatch[1] <= $mileage) {
-                $matches[] = $service['name'];
-            }
+            // Recherche des valeurs numériques en km et mois
+            preg_match_all('/(\d{1,3}(?:[.,\s]?\d{3})*)[ ]*km/i', $name, $kmMatches);
+            preg_match_all('/(\d+)[ ]*mois/i', $name, $moisMatches);
 
-            if (preg_match('/(\d+)[ ]*mois/i', $name, $moisMatch) && $moisMatch[1] <= $ageMonths) {
-                $matches[] = $service['name'];
+            // Nettoyage et conversion
+            $kmValues = array_map(fn($v) => (int) str_replace(['.', ',', ' '], '', $v), $kmMatches[1]);
+            $maxKm = !empty($kmValues) ? max($kmValues) : null;
+
+            $moisValues = array_map('intval', $moisMatches[1]);
+            $maxMois = !empty($moisValues) ? max($moisValues) : null;
+
+            // Vérification des seuils atteints
+            $isKmValid = $maxKm !== null && $mileage >= $maxKm;
+            $isMoisValid = $maxMois !== null && $ageMonths >= $maxMois;
+
+            // Ne garder l'opération que si au moins un seuil est atteint
+            if ($isKmValid || $isMoisValid) {
+                $key = $service['category'] ?? 'default';
+                $score = max($maxKm ?? 0, $maxMois ?? 0);
+
+                if (!isset($validServices[$key]) || $score > $validServices[$key]['score']) {
+                    $validServices[$key] = [
+                        'service' => $service,
+                        'score' => $score,
+                    ];
+                }
             }
         }
 
-        return array_unique($matches);
+        return array_map(fn($entry) => $entry['service']['name'], array_values($validServices));
     }
 
     #[Route('/api/suggest-addons', name: 'suggest-addons', methods: ['POST'])]
@@ -100,7 +120,7 @@ class GeminiSuggestController extends AbstractController
 
         L’opération principale prévue est : $operation.
 
-        À partir de cette liste, propose jusqu’à 3 opérations complémentaires pertinentes issues du catalogue.  
+        À partir de cette liste, propose une liste complémentaires pertinentes issues du catalogue par rapport aux informations du véhicule.  
         Ne propose que des noms présents dans la liste.
         Réponds uniquement avec une liste simple, sans explication.
         EOT;
@@ -143,10 +163,38 @@ class GeminiSuggestController extends AbstractController
                 return $this->json(['message' => 'Aucune suggestion pertinente trouvée.']);
             }
 
+            // Fusionner les deux sources
+            $mergedSuggestions = $suggestions;
+
+            foreach ($csvSuggestions as $csvName) {
+                $alreadyIncluded = false;
+                foreach ($mergedSuggestions as $item) {
+                    if (strcasecmp($item['operation'], $csvName) === 0) {
+                        $alreadyIncluded = true;
+                        break;
+                    }
+                }
+
+                if (!$alreadyIncluded) {
+                    foreach ($this->services as $service) {
+                        if (strcasecmp($service['name'], $csvName) === 0) {
+                            $mergedSuggestions[] = [
+                                'operation' => $service['name'],
+                                'category' => $service['category'],
+                                'additionnal_help' => $service['additionnal_help'],
+                                'additionnal_comment' => $service['additionnal_comment'],
+                                'time_unit' => $service['time_unit'],
+                                'price' => $service['price'],
+                            ];
+                            break;
+                        }
+                    }
+                }
+            }
+
             return $this->json([
                 'type' => 'addons',
-                'csv_based' => $csvSuggestions,
-                'ai_suggestions' => $suggestions,
+                'ai_suggestions' => $mergedSuggestions,
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Gemini call failed: ' . $e->getMessage()], 502);
