@@ -35,11 +35,11 @@ class GeminiController extends AbstractController
                     $services[] = [
                         'id' => $data[0],
                         'name' => $data[1],
-                        'category' => $data[2],
-                        'additionnal_help' => $data[3],
-                        'additionnal_comment' => $data[4],
-                        'time_unit' => $data[5],
-                        'price' => $data[6]
+                        'category' => $data[2] ?? '',
+                        'additionnal_help' => $data[3] ?? '',
+                        'additionnal_comment' => $data[4] ?? '',
+                        'time_unit' => $data[5] ?? '',
+                        'price' => $data[6] ?? ''
                     ];
                 }
             }
@@ -49,70 +49,19 @@ class GeminiController extends AbstractController
         return $services;
     }
 
+    #[Route('/api/generate-text', name: 'generate_text', methods: ['GET'])]
+    public function generate(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $userText = trim($data['text'] ?? '');
 
-  #[Route('/api/generate-text', name: 'generate_text', methods: ['GET'])]
-
-  public function generate(Request $request): JsonResponse
-  {
-    $data     = json_decode($request->getContent(), true);
-    $userText = trim($data['text'] ?? '');
-
-    // Construire le contexte avec les services du CSV
-    $context = "Tu es un assistant virtuel spécialisé dans la prise de rendez-vous et la proposition de services pour un atelier automobile.\n\n";
-    $context .= "Voici la liste des opérations disponibles :\n";
-    foreach ($this->services as $index => $service) {
-      $context .= ($index + 1) . ". " . $service['name'] . " (" . $service['category'] . ")\n";
-    }
-    $context .= "\nInstructions:\n";
-    $context .= "- Si l'utilisateur demande un de ces services, répond avec le nom exact de l'opération.\n";
-    $context .= "- Si l'utilisateur demande autre chose, répond que ce service n'est pas proposé.";
-
-    if ('' === trim($userText)) {
-      return $this->json([
-        'error' => 'Le champ "text" est requis.',
-      ], JsonResponse::HTTP_BAD_REQUEST);
-    }
-
-    $payload = [
-      'contents' => [
-        [
-          'role'  => 'user',
-          'parts' => [
-            ['text' => $context . "\n\n" . $userText],
-          ],
-        ],
-      ],
-    ];
-
-    // URL de votre API Gemini
-    $apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyB9im4A-p34XTqFXgoyOpItPvgGot9HecE';
-
-    try {
-      $response = $this->httpClient->request('POST', $apiUrl, [
-        'headers' => ['Content-Type' => 'application/json'],
-        'json'    => $payload,
-        'timeout' => 60,
-      ]);
-
-      $data = $response->toArray(false);
-
-      // Extraire le texte de la réponse
-      $responseText = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
-
-      // Vérifier si la réponse correspond à un service de la liste
-      foreach ($this->services as $service) {
-        if (stripos($responseText, $service['name']) !== false) {
-          return $this->json([
-            'operation' => $service['name'],
-            'category' => $service['category'],
-            'additionnal_help' => $service['additionnal_help'],
-            'additionnal_comment' => $service['additionnal_comment'],
-            'time_unit' => $service['time_unit'],
-            'price' => $service['price']
-          ]);
+        if ($userText === '') {
+            return $this->json([
+                'error' => 'Le champ "text" est requis.',
+            ], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        // Contexte pour identifier les services connus
+        // Contexte principal
         $context = "Tu es un assistant virtuel spécialisé dans la prise de rendez-vous et la proposition de services pour un atelier automobile.\n\n";
         $context .= "Voici la liste des opérations disponibles :\n";
         foreach ($this->services as $index => $service) {
@@ -122,7 +71,6 @@ class GeminiController extends AbstractController
         $context .= "- Si l'utilisateur demande un de ces services, répond avec le nom exact de l'opération.\n";
         $context .= "- Si l'utilisateur demande autre chose, répond que ce service n'est pas proposé.";
 
-        // Premier appel Gemini : pour détecter une opération
         $primaryPayload = [
             'contents' => [
                 [
@@ -146,7 +94,7 @@ class GeminiController extends AbstractController
             $responseData = $response->toArray(false);
             $responseText = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
-            // Vérifier si un service est mentionné
+            // Cherche une opération exacte dans la réponse
             foreach ($this->services as $service) {
                 if (stripos($responseText, $service['name']) !== false) {
                     return $this->json([
@@ -160,7 +108,7 @@ class GeminiController extends AbstractController
                 }
             }
 
-            // 2e appel Gemini : réponse générale mais uniquement auto
+            // Contexte secondaire si aucune correspondance
             $generalContext = <<<EOT
             Tu es un assistant virtuel automobile. Tu réponds uniquement aux questions liées aux véhicules (voitures, moteurs, pièces, réparations, entretien, etc.).
 
@@ -192,11 +140,11 @@ class GeminiController extends AbstractController
                 'response' => $fallbackText,
                 'type' => 'general'
             ]);
+
         } catch (\Exception $e) {
             return $this->json([
                 'error' => 'Erreur lors de l’appel à Gemini : ' . $e->getMessage(),
             ], JsonResponse::HTTP_BAD_GATEWAY);
         }
     }
-  }
 }
