@@ -13,6 +13,7 @@ class DealershipLocatorController extends AbstractController
 {
     #[Route('/api/nearby-dealerships', name: 'get_nearby_dealerships', methods: ['GET'])]
     public function __invoke(
+        Request $request,
         DealershipRepository $dealershipRepository,
         Security $security
     ): JsonResponse {
@@ -23,18 +24,25 @@ class DealershipLocatorController extends AbstractController
         }
         /** @var \App\Entity\User $user */
         $address = $user->getAddress();
-
         if (!$address) {
             return new JsonResponse(['error' => 'Adresse utilisateur manquante'], 400);
         }
 
         $coords = $this->geocodeAddress($address);
-
         if (!$coords) {
             return new JsonResponse(['error' => 'Adresse invalide ou introuvable'], 404);
         }
 
-        $dealerships = $dealershipRepository->findNearest($coords['lat'], $coords['lon']);
+        // 📦 Pagination
+        $limit = max(1, (int)$request->query->get('limit', 10));
+        $offset = max(0, (int)$request->query->get('offset', 0));
+
+        $dealerships = $dealershipRepository->findNearest(
+            $coords['lat'],
+            $coords['lon'],
+            $limit,
+            $offset
+        );
 
         return new JsonResponse($dealerships);
     }
