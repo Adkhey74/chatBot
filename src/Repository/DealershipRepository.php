@@ -15,7 +15,7 @@ class DealershipRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Dealership::class);
     }
-    public function findNearest(float $lat, float $lon, int $limit = 5): array
+    public function findNearest(float $lat, float $lon, int $limit = 10, int $offset = 0): array
     {
         $conn = $this->getEntityManager()->getConnection();
 
@@ -29,18 +29,18 @@ class DealershipRepository extends ServiceEntityRepository
         ) AS distance
         FROM dealership d
         ORDER BY distance ASC
-        LIMIT :limit
+        LIMIT :limit OFFSET :offset
     ";
 
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('lat', $lat);
         $stmt->bindValue('lon', $lon);
         $stmt->bindValue('limit', $limit, \PDO::PARAM_INT);
+        $stmt->bindValue('offset', $offset, \PDO::PARAM_INT);
 
-        // Doctrine DBAL 3.x : execute() retourne un Result, pas un Statement
-        $result = $stmt->executeQuery(); // ← c’est ça la différence clé
+        $result = $stmt->executeQuery();
 
-        return $result->fetchAllAssociative(); // fonctionne avec DBAL 3.x
+        return $result->fetchAllAssociative();
     }
 
 
