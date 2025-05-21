@@ -53,7 +53,7 @@ class GeminiController extends AbstractController
   /**
    * @Route("/generate-text", name="generate_text", methods={"POST"})
    */
-  #[Route('/api/generate-text', name: 'user_drivers', methods: ['GET'])]
+  #[Route('/api/generate-text', name: 'generate_text', methods: ['GET'])]
 
   public function generate(Request $request): JsonResponse
   {
