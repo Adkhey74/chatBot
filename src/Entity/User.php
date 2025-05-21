@@ -21,7 +21,7 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
-use App\State\UserPasswordHasher;
+use App\State\UserCreation;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
@@ -30,7 +30,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[UniqueEntity('email')]
 #[ApiResource(
     operations:[
-    new Post(uriTemplate: "/public/user", processor: UserPasswordHasher::class, validationContext: ['groups' => ['user:create']])
+    new Post(uriTemplate: "/public/user", processor: UserCreation::class, validationContext: ['groups' => ['user:create']])
     ],
     normalizationContext: ['groups' => ['user:read']],
     denormalizationContext: ['groups' => ['user:create', 'user:update']],
@@ -97,6 +97,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Driver::class, cascade: ['persist', 'remove'])]
     private Collection $drivers;
+
+    #[ORM\OneToOne(cascade: ['persist', 'remove'])]
+    #[ORM\JoinColumn(name:'own_driver_id')]
+    private ?Driver $ownDriverId = null;
 
     public function __construct()
     {
@@ -168,7 +172,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->plainPassword = null;
     }
 
-        /**
+    /**
      * @see UserInterface
      *
      * @return list<string>
@@ -293,6 +297,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             }
         }
     
+        return $this;
+    }
+
+    public function getOwnDriverId(): ?Driver
+    {
+        return $this->ownDriverId;
+    }
+
+    public function setOwnDriverId(?Driver $ownDriverId): static
+    {
+        $this->ownDriverId = $ownDriverId;
+
         return $this;
     }
 }
