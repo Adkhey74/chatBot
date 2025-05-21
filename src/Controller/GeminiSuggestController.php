@@ -68,7 +68,7 @@ class GeminiSuggestController extends AbstractController
         return array_unique($matches);
     }
 
-    #[Route('/api/suggest-addons', name: 'suggest-addons', methods: ['GET'])]
+    #[Route('/api/suggest-addons', name: 'suggest-addons', methods: ['POST'])]
     public function suggest(Request $request): JsonResponse
     {
         $payload = json_decode($request->getContent(), true);
