@@ -25,8 +25,6 @@ class VehicleController extends AbstractController
             return $this->json(['error' => 'registrationNumber is required'], 400);
         }
 
-        $apiKey = '92d7cdfcd7mshc96d3962cc8be3fp147d8cjsnfffb5ffb88cd'; // ⛔ à mettre dans .env en prod
-        $apiUrl = 'https://api-plaque-immatriculation-siv.p.rapidapi.com/get-vehicle-info';
 
         try {
             $response = $httpClient->request('GET', 'https://api-plaque-immatriculation-siv.p.rapidapi.com/get-vehicule-info', [

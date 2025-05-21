@@ -3,6 +3,7 @@
 namespace App\Controller\Api;
 
 use App\Repository\DealershipRepository;
+use App\Repository\AppointmentRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,6 +16,7 @@ class DealershipLocatorController extends AbstractController
     public function __invoke(
         Request $request,
         DealershipRepository $dealershipRepository,
+        AppointmentRepository $appointmentRepository,
         Security $security
     ): JsonResponse {
         $user = $security->getUser();
@@ -22,7 +24,7 @@ class DealershipLocatorController extends AbstractController
         if (!$user || !method_exists($user, 'getAddress')) {
             return new JsonResponse(['error' => 'Utilisateur non connecté ou sans adresse'], 400);
         }
-        /** @var \App\Entity\User $user */
+
         $address = $user->getAddress();
         if (!$address) {
             return new JsonResponse(['error' => 'Adresse utilisateur manquante'], 400);
@@ -33,7 +35,6 @@ class DealershipLocatorController extends AbstractController
             return new JsonResponse(['error' => 'Adresse invalide ou introuvable'], 404);
         }
 
-        // 📦 Pagination
         $limit = max(1, (int)$request->query->get('limit', 10));
         $offset = max(0, (int)$request->query->get('offset', 0));
 
@@ -44,7 +45,81 @@ class DealershipLocatorController extends AbstractController
             $offset
         );
 
-        return new JsonResponse($dealerships);
+        $response = [];
+
+        foreach ($dealerships as $dealership) {
+            $availableSlots = [];
+
+            for ($d = 0; $d < 7; $d++) {
+                $date = (new \DateTime())->modify("+$d day");
+                $daySlots = $this->generateTimeSlots($date);
+
+                $dayStart = (clone $date)->setTime(0, 0, 0);
+                $dayEnd = (clone $date)->setTime(23, 59, 59);
+
+                $appointments = $appointmentRepository->createQueryBuilder('a')
+                    ->andWhere('a.dealership = :dealership')
+                    ->andWhere('a.appointmentDate BETWEEN :start AND :end')
+                    ->setParameter('dealership', $dealership['id'])
+                    ->setParameter('start', $dayStart)
+                    ->setParameter('end', $dayEnd)
+                    ->getQuery()
+                    ->getResult();
+
+                $taken = [];
+
+                foreach ($appointments as $appointment) {
+                    $start = clone $appointment->getAppointmentDate();
+                    $timeUnit = $appointment->getCarOperation()?->getTimeUnit() ?? 1;
+                    $durationInMinutes = $timeUnit * 60;
+
+                    $end = (clone $start)->modify("+$durationInMinutes minutes");
+
+                    while ($start < $end) {
+                        $taken[] = $start->format('H:i');
+                        $start->modify('+30 minutes');
+                    }
+                }
+
+                $freeSlots = array_filter($daySlots, fn($slot) => !in_array($slot, $taken));
+                $availableSlots[$date->format('Y-m-d')] = array_values($freeSlots);
+            }
+
+            $response[] = [
+                'id' => $dealership['id'],
+                'name' => $dealership['name'] ?? null,
+                'availableSlots' => $availableSlots
+            ];
+        }
+
+        return new JsonResponse($response);
+    }
+
+    private function generateTimeSlots(\DateTime $date): array
+    {
+        $slots = [];
+
+        // 9h à 12h
+        $start = clone $date;
+        $start->setTime(9, 0);
+        $end = clone $date;
+        $end->setTime(12, 0);
+
+        while ($start < $end) {
+            $slots[] = $start->format('H:i');
+            $start->modify('+30 minutes');
+        }
+
+        // 14h à 18h
+        $start->setTime(14, 0);
+        $end->setTime(18, 0);
+
+        while ($start < $end) {
+            $slots[] = $start->format('H:i');
+            $start->modify('+30 minutes');
+        }
+
+        return $slots;
     }
 
     private function geocodeAddress(string $address): ?array
