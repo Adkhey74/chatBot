@@ -155,9 +155,8 @@ class GeminiController extends AbstractController
       $fallbackText = $fallbackData['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
       return $this->json([
-        'type' => 'service',
+        'type' => 'general',
         'content' => $fallbackText,
-        'services' => [],
       ]);
     } catch (\Exception $e) {
       return $this->json([
