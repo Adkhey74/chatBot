@@ -1,4 +1,4 @@
-﻿operation_name;category;additionnal_help;additionnal_comment;time_unit;price
+﻿﻿operation_name;category;additionnal_help;additionnal_comment;time_unit;price
 Service Huile Moteur;Je souhaite entretenir mon véhicule;Veuillez noter que lors de la vidange, le remplacement du microfiltre d’habitacle est nécessaire. Aussi, nous vous invitons à l’ajouter à votre sélection.;NULL;10;494
 Service microfiltre d'habitacle;Je souhaite entretenir mon véhicule;NULL;NULL;2;215
 Service filtre à carburant;Je souhaite entretenir mon véhicule;NULL;NULL;3;339

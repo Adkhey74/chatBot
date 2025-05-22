@@ -97,6 +97,9 @@ class GeminiController extends AbstractController
 
       $matchedServices = [];
 
+      // Cherche une opération exacte dans la réponse
+      $matchedServices = [];
+
       foreach ($this->services as $service) {
          if (stripos($responseText, $service['name']) !== false && $service['additionnal_comment'] != 'NULL') {
           return $this->json([
@@ -111,6 +114,8 @@ class GeminiController extends AbstractController
             'additionnal_help' => $service['additionnal_help'],
             'additionnal_comment' => $service['additionnal_comment'],
             'time_unit' => $service['time_unit'],
+            'price' => $service['price'],
+          ];
             'price' => $service['price'],
           ];
         }
@@ -140,6 +145,7 @@ class GeminiController extends AbstractController
             'role' => 'user',
             'parts' => [
               ['text' => $generalContext . "\n\n" . $userText . "\n\nRéponds en maximum 3 lignes."],
+              ['text' => $generalContext . "\n\n" . $userText . "\n\nRéponds en maximum 3 lignes."],
             ],
           ],
         ],
@@ -168,3 +174,4 @@ class GeminiController extends AbstractController
     }
   }
 }
+
