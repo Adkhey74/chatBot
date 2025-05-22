@@ -24,7 +24,7 @@ class DealershipLocatorController extends AbstractController
         if (!$user || !method_exists($user, 'getAddress')) {
             return new JsonResponse(['error' => 'Utilisateur non connecté ou sans adresse'], 400);
         }
-
+        /** @var \App\Entity\User $user */
         $address = $user->getAddress();
         if (!$address) {
             return new JsonResponse(['error' => 'Adresse utilisateur manquante'], 400);
