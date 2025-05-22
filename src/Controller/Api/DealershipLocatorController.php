@@ -19,28 +19,19 @@ class DealershipLocatorController extends AbstractController
         AppointmentRepository $appointmentRepository,
         Security $security
     ): JsonResponse {
-        $user = $security->getUser();
+        $latitude = $request->query->get('latitude');
+        $longitude = $request->query->get('longitude');
 
-        if (!$user || !method_exists($user, 'getAddress')) {
-            return new JsonResponse(['error' => 'Utilisateur non connecté ou sans adresse'], 400);
-        }
-        /** @var \App\Entity\User $user */
-        $address = $user->getAddress();
-        if (!$address) {
-            return new JsonResponse(['error' => 'Adresse utilisateur manquante'], 400);
-        }
-
-        $coords = $this->geocodeAddress($address);
-        if (!$coords) {
-            return new JsonResponse(['error' => 'Adresse invalide ou introuvable'], 404);
+        if (!$latitude || !$longitude) {
+            return new JsonResponse(['error' => 'Coordonnées géographiques manquantes'], 400);
         }
 
         $limit = max(1, (int)$request->query->get('limit', 10));
         $offset = max(0, (int)$request->query->get('offset', 0));
 
         $dealerships = $dealershipRepository->findNearest(
-            $coords['lat'],
-            $coords['lon'],
+            (float)$latitude,
+            (float)$longitude,
             $limit,
             $offset
         );
@@ -48,43 +39,6 @@ class DealershipLocatorController extends AbstractController
         $response = [];
 
         foreach ($dealerships as $dealership) {
-            $availableSlots = [];
-
-            // for ($d = 0; $d < 7; $d++) {
-            //     $date = (new \DateTime())->modify("+$d day");
-            //     $daySlots = $this->generateTimeSlots($date);
-
-            //     $dayStart = (clone $date)->setTime(0, 0, 0);
-            //     $dayEnd = (clone $date)->setTime(23, 59, 59);
-
-            //     $appointments = $appointmentRepository->createQueryBuilder('a')
-            //         ->andWhere('a.dealership = :dealership')
-            //         ->andWhere('a.appointmentDate BETWEEN :start AND :end')
-            //         ->setParameter('dealership', $dealership['id'])
-            //         ->setParameter('start', $dayStart)
-            //         ->setParameter('end', $dayEnd)
-            //         ->getQuery()
-            //         ->getResult();
-
-            //     $taken = [];
-
-            //     foreach ($appointments as $appointment) {
-            //         $start = clone $appointment->getAppointmentDate();
-            //         $timeUnit = $appointment->getCarOperation()?->getTimeUnit() ?? 1;
-            //         $durationInMinutes = $timeUnit * 60;
-
-            //         $end = (clone $start)->modify("+$durationInMinutes minutes");
-
-            //         while ($start < $end) {
-            //             $taken[] = $start->format('H:i');
-            //             $start->modify('+30 minutes');
-            //         }
-            //     }
-
-            //     $freeSlots = array_filter($daySlots, fn($slot) => !in_array($slot, $taken));
-            //     $availableSlots[$date->format('Y-m-d')] = array_values($freeSlots);
-            // }
-
             $dealershipData = [
                 'id' => $dealership['id'],
                 'name' => $dealership['name'] ?? null,
@@ -101,8 +55,8 @@ class DealershipLocatorController extends AbstractController
         return new JsonResponse([
             'dealerships' => $response,
             'userLocation' => [
-                'latitude' => $coords['lat'],
-                'longitude' => $coords['lon'],
+                'latitude' => (float)$latitude,
+                'longitude' => (float)$longitude,
             ]
         ]);
     }
@@ -132,33 +86,5 @@ class DealershipLocatorController extends AbstractController
         }
 
         return $slots;
-    }
-
-    private function geocodeAddress(string $address): ?array
-    {
-        $url = 'https://nominatim.openstreetmap.org/search?' . http_build_query([
-            'q' => $address,
-            'format' => 'json',
-            'limit' => 1,
-        ]);
-
-        $opts = [
-            "http" => [
-                "header" => "User-Agent: MySymfonyApp/1.0\r\n"
-            ]
-        ];
-
-        $context = stream_context_create($opts);
-        $response = file_get_contents($url, false, $context);
-        $data = json_decode($response, true);
-
-        if (!empty($data[0])) {
-            return [
-                'lat' => (float)$data[0]['lat'],
-                'lon' => (float)$data[0]['lon'],
-            ];
-        }
-
-        return null;
     }
 }
