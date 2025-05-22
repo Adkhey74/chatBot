@@ -57,11 +57,12 @@ class GeminiController extends AbstractController
 
     if ($userText === '') {
       return $this->json([
-        'error' => 'Le champ "text" est requis.',
+        'type' => 'service',
+        'content' => 'Le champ "text" est requis.',
+        'services' => [],
       ], JsonResponse::HTTP_BAD_REQUEST);
     }
 
-    // Contexte principal
     $context = "Tu es un assistant virtuel spécialisé dans la prise de rendez-vous et la proposition de services pour un atelier automobile.\n\n";
     $context .= "Voici la liste des opérations disponibles :\n";
     foreach ($this->services as $index => $service) {
@@ -70,6 +71,8 @@ class GeminiController extends AbstractController
     $context .= "\nInstructions:\n";
     $context .= "- Si l'utilisateur demande un de ces services, répond avec le nom exact de l'opération.\n";
     $context .= "- Si l'utilisateur demande autre chose, répond que ce service n'est pas proposé.";
+
+    $apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyB9im4A-p34XTqFXgoyOpItPvgGot9HecE';
 
     $primaryPayload = [
       'contents' => [
@@ -82,8 +85,6 @@ class GeminiController extends AbstractController
       ],
     ];
 
-    $apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyB9im4A-p34XTqFXgoyOpItPvgGot9HecE';
-
     try {
       $response = $this->httpClient->request('POST', $apiUrl, [
         'headers' => ['Content-Type' => 'application/json'],
@@ -94,36 +95,44 @@ class GeminiController extends AbstractController
       $responseData = $response->toArray(false);
       $responseText = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
-      // Cherche une opération exacte dans la réponse
+      $matchedServices = [];
+
       foreach ($this->services as $service) {
-        if (stripos($responseText, $service['name']) !== false && $service['additionnal_comment'] != 'NULL') {
+         if (stripos($responseText, $service['name']) !== false && $service['additionnal_comment'] != 'NULL') {
           return $this->json([
             'type' => 'general',
             'content' => $service['additionnal_comment'],
           ]);
         } else if (stripos($responseText, $service['name']) !== false) {
-          $customMessage = "J'ai bien compris votre demande. Je vous propose le service suivant : " . $service['name'] .
-            " (" . $service['category'] . "). Vous pouvez maintenant sélectionner sur quel véhicule vous souhaitez effectuer cette opération.";
-          return $this->json([
-            'type' => 'service',
-            'content' => $customMessage,
+          $matchedServices[] = [
+            'id' => (string)$service['id'],
             'operation' => $service['name'],
             'category' => $service['category'],
             'additionnal_help' => $service['additionnal_help'],
             'additionnal_comment' => $service['additionnal_comment'],
             'time_unit' => $service['time_unit'],
-            'price' => $service['price']
-          ]);
+            'price' => $service['price'],
+          ];
         }
       }
 
-      // Contexte secondaire si aucune correspondance
+      if (!empty($matchedServices)) {
+        return $this->json([
+          'type' => 'service',
+          'content' => count($matchedServices) === 1
+            ? "Voici le service correspondant à votre demande."
+            : "Plusieurs services correspondent à votre demande, veuillez en sélectionner un.",
+          'services' => $matchedServices,
+        ]);
+      }
+
+      // Fallback si aucun service trouvé
       $generalContext = <<<EOT
             Tu es un assistant virtuel automobile. Tu réponds uniquement aux questions liées aux véhicules (voitures, moteurs, pièces, réparations, entretien, etc.).
 
             Si la question n’est pas liée à l’automobile, tu dois répondre :
             "Je suis un assistant automobile et je ne peux répondre qu’à des questions liées aux véhicules."
-            EOT;
+        EOT;
 
       $fallbackPayload = [
         'contents' => [
@@ -146,13 +155,15 @@ class GeminiController extends AbstractController
       $fallbackText = $fallbackData['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
       return $this->json([
+        'type' => 'service',
         'content' => $fallbackText,
-        'type' => 'general'
+        'services' => [],
       ]);
     } catch (\Exception $e) {
       return $this->json([
-        'type' => 'general',
-        'error' => 'Erreur lors de l’appel à Gemini : ' . $e->getMessage(),
+        'type' => 'service',
+        'content' => 'Erreur lors de l’appel à Gemini : ' . $e->getMessage(),
+        'services' => [],
       ], JsonResponse::HTTP_BAD_GATEWAY);
     }
   }
