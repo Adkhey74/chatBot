@@ -72,7 +72,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(length: 255)]
     #[Groups(['user:read', 'user:create'])]
-    #[Assert\Type('string'), Assert\Choice(['M', 'Mme', 'Société'])]
+    // #[Assert\Type('string'), Assert\Choice(['M', 'Mme', 'Société'])]
     private ?string $title = null;
 
     #[ORM\Column(length: 255)]
