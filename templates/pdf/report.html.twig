@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>Devis</title>
+		<style>
+			body {
+				font-family: DejaVuSans, sans-serif;
+				font-size: 12pt;
+				color: #333;
+			}
+
+			.header {
+				display: flex;
+				justify-content: space-between;
+				margin-bottom: 30px;
+			}
+
+			.logo {
+				width: 150px;
+			}
+
+			.company-info {
+				text-align: right;
+				font-size: 10pt;
+			}
+
+			.client-info {
+				margin-bottom: 20px;
+			}
+
+			.client-info div {
+				margin: 5px 0;
+			}
+
+			.services-table {
+				width: 100%;
+				border-collapse: collapse;
+				margin-bottom: 20px;
+			}
+
+			.services-table th,
+			.services-table td {
+				border: 1px solid #ddd;
+				padding: 8px;
+				text-align: left;
+			}
+
+			.total {
+				font-weight: bold;
+				text-align: right;
+				margin-top: 10px;
+			}
+
+			.extra-info {
+				margin-top: 20px;
+				padding: 10px;
+				border: 1px solid #ddd;
+				background-color: #f9f9f9;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="header">
+			<div>
+				<img src="{{ asset('img/logo.jpg') }}" alt="Logo" class="logo"/>
+			</div>
+			<div class="company-info">
+				<p>{{ appointment.dealership.name }}</p>
+				<p>{{ appointment.dealership.address }}</p>
+				<p>
+					{{ appointment.dealership.zipcode }}
+					{{ appointment.dealership.city }}
+				</p>
+			</div>
+		</div>
+
+		<div class="client-info">
+			<div>
+				<strong>Client :</strong>
+				{{ appointment.driver.firstName }}
+				{{ appointment.driver.lastName }}
+			</div>
+			<div>
+				<strong>Téléphone :</strong>
+				{{ appointment.driver.phoneNumber }}
+			</div>
+			<div>
+				<strong>Date du RDV :</strong>
+				{{ datetimeField }}</div>
+		</div>
+
+		{% set total = 0 %}
+
+		<table class="services-table">
+			<thead>
+				<tr>
+					<th>Service</th>
+					<th>Temps Estimé</th>
+					<th>Coût</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for carOperation in appointment.carOperations %}
+					<tr>
+						<td>{{ carOperation.name }}</td>
+						<td>{{ carOperation.timeUnit }}h</td>
+						<td>{{ carOperation.price | number_format(2, ',', ' ') }}
+							€</td>
+						{% set total = total + carOperation.price %}
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+		<div class="total">
+			<p>Total :
+				{{ total | number_format(2, ',', ' ') }}
+				€</p>
+            </div>
+        </div>
+        {% if appointment.supplementaryInfos is not null %}
+        <div class="extra-info">
+            <strong>Informations supplémentaires :</strong>
+            <p class="table">{{ appointment.supplementaryInfos }}</p>
+        </div>
+        {% endif %}
+	</body>
+</html>
