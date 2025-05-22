@@ -25,7 +25,7 @@ class GeminiController extends AbstractController
   private function loadServicesFromCsv(): array
   {
     $services = [];
-    $csvPath = $this->params->get('kernel.project_dir') . '/data/carOperation.csv';
+    $csvPath = $this->params->get('kernel.project_dir') . '/data/iaData.csv';
 
     if (($handle = fopen($csvPath, "r")) !== false) {
       fgetcsv($handle, 1000, ","); // skip header
@@ -95,22 +95,35 @@ class GeminiController extends AbstractController
       $responseText = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
       // Cherche une opération exacte dans la réponse
+      $matchedServices = [];
+
       foreach ($this->services as $service) {
-        if (stripos($responseText, $service['name']) !== false) {
-          $customMessage = "J'ai bien compris votre demande. Je vous propose le service suivant : " . $service['name'] .
-            " (" . $service['category'] . "). Vous pouvez maintenant sélectionner sur quel véhicule vous souhaitez effectuer cette opération.";
+        if (stripos($responseText, $service['name']) !== false && $service['additionnal_comment'] != 'NULL') {
           return $this->json([
-            'type' => 'service',
-            'content' => $customMessage,
+            'type' => 'general',
+            'content' => $service['additionnal_comment'],
+          ]);
+        } else if (stripos($responseText, $service['name']) !== false) {
+          $matchedServices[] = [
+            'id' => $service['id'],
             'operation' => $service['name'],
             'category' => $service['category'],
             'additionnal_help' => $service['additionnal_help'],
             'additionnal_comment' => $service['additionnal_comment'],
             'time_unit' => $service['time_unit'],
-            'price' => $service['price']
-          ]);
+            'price' => $service['price'],
+          ];
         }
       }
+
+      if (!empty($matchedServices)) {
+        return $this->json([
+          'type' => 'services',
+          'content' => "Voici les services correspondants à votre demande.",
+          'services' => $matchedServices,
+        ]);
+      }
+
 
       // Contexte secondaire si aucune correspondance
       $generalContext = <<<EOT
@@ -125,7 +138,7 @@ class GeminiController extends AbstractController
           [
             'role' => 'user',
             'parts' => [
-              ['text' => $generalContext . "\n\n" . $userText],
+              ['text' => $generalContext . "\n\n" . $userText . "\n\nRéponds en maximum 3 lignes."],
             ],
           ],
         ],
@@ -141,8 +154,8 @@ class GeminiController extends AbstractController
       $fallbackText = $fallbackData['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
       return $this->json([
-        'response' => $fallbackText,
-        'type' => 'general'
+        'content' => $fallbackText,
+        'type' => 'general',
       ]);
     } catch (\Exception $e) {
       return $this->json([
@@ -152,3 +165,4 @@ class GeminiController extends AbstractController
     }
   }
 }
+
