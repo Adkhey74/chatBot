@@ -24,7 +24,7 @@ class ImportDealershipsCommand extends Command
         // skip header
         fgetcsv($file);
 
-        while (($row = fgetcsv($file, 1000, ',')) !== false) {
+        while (($row = fgetcsv($file, 1000, ';')) !== false) {
             $dealership = new Dealership();
             $dealership->setName($row[0]);
             $dealership->setCity($row[1]);
