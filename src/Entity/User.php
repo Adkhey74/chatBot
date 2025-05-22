@@ -30,8 +30,9 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[UniqueEntity('email')]
 #[ApiResource(
-    operations:[
-    new Post(uriTemplate: "/public/user", processor: UserCreation::class, validationContext: ['groups' => ['user:create']])
+    operations: [
+        new Post(uriTemplate: "/public/user", processor: UserCreation::class, validationContext: ['groups' => ['user:create']]),
+        new Patch()
     ],
     normalizationContext: ['groups' => ['user:read']],
     denormalizationContext: ['groups' => ['user:create', 'user:update']],
@@ -41,6 +42,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['user:read'])]
     private ?int $id = null;
 
     #[Assert\NotBlank]
@@ -95,7 +97,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\ManyToMany(targetEntity: Vehicle::class, inversedBy: 'users')]
     private Collection $vehicles;
-    
+
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Driver::class, cascade: ['persist', 'remove'])]
     private Collection $drivers;
 
@@ -114,7 +116,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->vehicles = new ArrayCollection();
         $this->drivers = new ArrayCollection();
         $this->appointments = new ArrayCollection();
-
     }
 
     public function getId(): ?int
@@ -286,17 +287,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->drivers;
     }
-    
+
     public function addDriver(Driver $driver): static
     {
         if (!$this->drivers->contains($driver)) {
             $this->drivers[] = $driver;
             $driver->setUser($this);
         }
-    
+
         return $this;
     }
-    
+
     public function removeDriver(Driver $driver): static
     {
         if ($this->drivers->removeElement($driver)) {
@@ -304,7 +305,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
                 $driver->setUser(null);
             }
         }
-    
+
         return $this;
     }
 

@@ -18,13 +18,14 @@ use App\Entity\Driver;
 use App\Entity\User;
 use App\Entity\CarOperation;
 use App\State\NewAppointmentProcessor;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 
 #[ORM\Entity(repositoryClass: AppointmentRepository::class)]
 #[ApiResource(
     operations: [
-        new Get(),
-        new GetCollection(),
+        new Get(normalizationContext: ['groups' => ['appointment:read']]),
+        new GetCollection(normalizationContext: ['groups' => ['appointment:read']]),
         new Post(processor: NewAppointmentProcessor::class),
         new Put(),
         new Delete(),
@@ -35,9 +36,11 @@ class Appointment
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['appointment:read'])]
     private ?int $id = null;
 
-    #[ORM\Column(nullable:true)]
+    #[ORM\Column(nullable: true)]
+    #[Groups(['appointment:read'])]
     private ?\DateTime $appointmentDate = null;
 
     #[ORM\Column(length: 255)]
@@ -49,6 +52,7 @@ class Appointment
 
     #[ORM\ManyToOne(targetEntity: Dealership::class)]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['appointment:read'])]
     private ?Dealership $dealership = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
@@ -66,6 +70,7 @@ class Appointment
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['appointment:read'])]
     private ?Vehicle $vehicle = null;
 
     public function __construct()
@@ -118,7 +123,7 @@ class Appointment
     {
         return $this->dealership;
     }
-    
+
     public function setDealership(?Dealership $dealership): static
     {
         $this->dealership = $dealership;
@@ -184,5 +189,4 @@ class Appointment
 
         return $this;
     }
-    
 }
