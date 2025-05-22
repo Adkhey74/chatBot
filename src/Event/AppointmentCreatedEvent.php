@@ -1,8 +1,10 @@
 <?php
 
+namespace App\Event;
+
 use App\Entity\Appointment;
 
-final class AppointementCreatedEvent
+final class AppointmentCreatedEvent
 {
     public function __construct(private readonly Appointment $appointment) {}
 

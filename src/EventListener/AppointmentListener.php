@@ -1,4 +1,5 @@
-<?PHP
+<?php
+// src/EventListener/AppointmentListener.php
 
 namespace App\EventListener;
 
@@ -6,20 +7,12 @@ use App\Event\AppointmentCreatedEvent;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\Mailer\Test\Constraint\EmailIsQueued;
-use Symfony\Component\Mime\Email;
-
-
-
 
 final class AppointmentListener implements EventSubscriberInterface
 {
-    public function __construct(private readonly MailerInterface $mailer)
-    {
-
-        $this->mailer = $mailer;
-    }
+    public function __construct(
+        private readonly MailerInterface $mailer,
+    ) {}
 
     public static function getSubscribedEvents(): array
     {
@@ -28,16 +21,21 @@ final class AppointmentListener implements EventSubscriberInterface
         ];
     }
 
-    public function onCreateForUser(AppointmentCreatedEvent $event, Security $security): void
+    public function onCreate(AppointmentCreatedEvent $event): void
     {
-        $user = $security->getUser();
+        $appointment = $event->getAppointment();
+        $user = $appointment->getUser();
 
-        $email = (new Email())
+        if (!$user) {
+            return;
+        }
+
+        $email = (new TemplatedEmail())
             ->from('noreply@garage.local')
             ->to($user->getEmail())
             ->subject('Confirmation de votre rendez-vous')
-            ->text('Salut, test envoi de mail');
+            ->text('Test email');
 
-        $this->mailer->send(message: $email);
+        $this->mailer->send($email);
     }
 }
