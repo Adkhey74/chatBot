@@ -36,6 +36,7 @@ class GeminiSuggestController extends AbstractController
             fgetcsv($h); // ignore header
             while (($row = fgetcsv($h)) !== false) {
                 $out[] = [
+                    'id' => $row[0] ?? '',
                     'name' => $row[1] ?? '',
                     'category' => $row[2] ?? '',
                     'additionnal_help' => $row[3] ?? '',
@@ -151,6 +152,7 @@ class GeminiSuggestController extends AbstractController
             foreach ($this->services as $s) {
                 if (strcasecmp($s['name'], $row['name'] ?? '') === 0) {
                     $aiSuggestions[] = [
+                        'id' => $s['id'],
                         'operation' => $s['name'],
                         'category' => $s['category'],
                         'additionnal_help' => $s['additionnal_help'],
