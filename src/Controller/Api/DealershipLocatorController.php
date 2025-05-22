@@ -50,49 +50,61 @@ class DealershipLocatorController extends AbstractController
         foreach ($dealerships as $dealership) {
             $availableSlots = [];
 
-            for ($d = 0; $d < 7; $d++) {
-                $date = (new \DateTime())->modify("+$d day");
-                $daySlots = $this->generateTimeSlots($date);
+            // for ($d = 0; $d < 7; $d++) {
+            //     $date = (new \DateTime())->modify("+$d day");
+            //     $daySlots = $this->generateTimeSlots($date);
 
-                $dayStart = (clone $date)->setTime(0, 0, 0);
-                $dayEnd = (clone $date)->setTime(23, 59, 59);
+            //     $dayStart = (clone $date)->setTime(0, 0, 0);
+            //     $dayEnd = (clone $date)->setTime(23, 59, 59);
 
-                $appointments = $appointmentRepository->createQueryBuilder('a')
-                    ->andWhere('a.dealership = :dealership')
-                    ->andWhere('a.appointmentDate BETWEEN :start AND :end')
-                    ->setParameter('dealership', $dealership['id'])
-                    ->setParameter('start', $dayStart)
-                    ->setParameter('end', $dayEnd)
-                    ->getQuery()
-                    ->getResult();
+            //     $appointments = $appointmentRepository->createQueryBuilder('a')
+            //         ->andWhere('a.dealership = :dealership')
+            //         ->andWhere('a.appointmentDate BETWEEN :start AND :end')
+            //         ->setParameter('dealership', $dealership['id'])
+            //         ->setParameter('start', $dayStart)
+            //         ->setParameter('end', $dayEnd)
+            //         ->getQuery()
+            //         ->getResult();
 
-                $taken = [];
+            //     $taken = [];
 
-                foreach ($appointments as $appointment) {
-                    $start = clone $appointment->getAppointmentDate();
-                    $timeUnit = $appointment->getCarOperation()?->getTimeUnit() ?? 1;
-                    $durationInMinutes = $timeUnit * 60;
+            //     foreach ($appointments as $appointment) {
+            //         $start = clone $appointment->getAppointmentDate();
+            //         $timeUnit = $appointment->getCarOperation()?->getTimeUnit() ?? 1;
+            //         $durationInMinutes = $timeUnit * 60;
 
-                    $end = (clone $start)->modify("+$durationInMinutes minutes");
+            //         $end = (clone $start)->modify("+$durationInMinutes minutes");
 
-                    while ($start < $end) {
-                        $taken[] = $start->format('H:i');
-                        $start->modify('+30 minutes');
-                    }
-                }
+            //         while ($start < $end) {
+            //             $taken[] = $start->format('H:i');
+            //             $start->modify('+30 minutes');
+            //         }
+            //     }
 
-                $freeSlots = array_filter($daySlots, fn($slot) => !in_array($slot, $taken));
-                $availableSlots[$date->format('Y-m-d')] = array_values($freeSlots);
-            }
+            //     $freeSlots = array_filter($daySlots, fn($slot) => !in_array($slot, $taken));
+            //     $availableSlots[$date->format('Y-m-d')] = array_values($freeSlots);
+            // }
 
-            $response[] = [
+            $dealershipData = [
                 'id' => $dealership['id'],
                 'name' => $dealership['name'] ?? null,
-                'availableSlots' => $availableSlots
+                'longitude' => $dealership['longitude'] ?? null,
+                'latitude' => $dealership['latitude'] ?? null,
+                'address' => $dealership['address'] ?? null,
+                'zipCode' => $dealership['zipCode'] ?? null,
+                'city' => $dealership['city'] ?? null,
             ];
+
+            $response[] = $dealershipData;
         }
 
-        return new JsonResponse($response);
+        return new JsonResponse([
+            'dealerships' => $response,
+            'userLocation' => [
+                'latitude' => $coords['lat'],
+                'longitude' => $coords['lon'],
+            ]
+        ]);
     }
 
     private function generateTimeSlots(\DateTime $date): array
