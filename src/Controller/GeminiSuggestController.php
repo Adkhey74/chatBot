@@ -37,6 +37,7 @@ class GeminiSuggestController extends AbstractController
                     'additionnal_comment' => $data[4] ?? '',
                     'time_unit' => $data[5] ?? '',
                     'price' => $data[6] ?? '',
+                    'id' => $data[0] ?? '',
                 ];
             }
             fclose($handle);
@@ -154,6 +155,7 @@ class GeminiSuggestController extends AbstractController
                         'additionnal_comment' => $service['additionnal_comment'],
                         'time_unit' => $service['time_unit'],
                         'price' => $service['price'],
+                        'id' => $service['id'],
                     ];
                     if (count($suggestions) >= 3) break;
                 }
@@ -185,6 +187,7 @@ class GeminiSuggestController extends AbstractController
                                 'additionnal_comment' => $service['additionnal_comment'],
                                 'time_unit' => $service['time_unit'],
                                 'price' => $service['price'],
+                                'id' => $service['id'],
                             ];
                             break;
                         }
