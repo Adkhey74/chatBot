@@ -99,13 +99,20 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private Collection $drivers;
 
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
-    #[ORM\JoinColumn(name:'own_driver_id')]
-    private ?Driver $ownDriverId = null;
+    #[ORM\JoinColumn]
+    private ?Driver $ownDriver = null;
+
+    /**
+     * @var Collection<int, Appointment>
+     */
+    #[ORM\OneToMany(targetEntity: Appointment::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $appointments;
 
     public function __construct()
     {
         $this->vehicles = new ArrayCollection();
         $this->drivers = new ArrayCollection();
+        $this->appointments = new ArrayCollection();
 
     }
 
@@ -300,14 +307,44 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getOwnDriverId(): ?Driver
+    public function getOwnDriver(): ?Driver
     {
-        return $this->ownDriverId;
+        return $this->ownDriver;
     }
 
-    public function setOwnDriverId(?Driver $ownDriverId): static
+    public function setOwnDriver(?Driver $ownDriver): static
     {
-        $this->ownDriverId = $ownDriverId;
+        $this->ownDriver = $ownDriver;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Appointment>
+     */
+    public function getAppointments(): Collection
+    {
+        return $this->appointments;
+    }
+
+    public function addAppointment(Appointment $appointment): static
+    {
+        if (!$this->appointments->contains($appointment)) {
+            $this->appointments->add($appointment);
+            $appointment->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAppointment(Appointment $appointment): static
+    {
+        if ($this->appointments->removeElement($appointment)) {
+            // set the owning side to null (unless already changed)
+            if ($appointment->getUser() === $this) {
+                $appointment->setUser(null);
+            }
+        }
 
         return $this;
     }

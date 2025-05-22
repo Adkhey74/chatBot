@@ -73,6 +73,9 @@
             "config/packages/nelmio_cors.yaml"
         ]
     },
+    "qipsius/tcpdf-bundle": {
+        "version": "3.0.5"
+    },
     "symfony/console": {
         "version": "6.4",
         "recipe": {

@@ -8,9 +8,7 @@ use App\Entity\Driver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use App\Entity\User;
-// use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 
-// #[AsDecorator('api_platform.doctrine.orm.state.persist_processor')]
 class UserCreation implements ProcessorInterface
 {
     public function __construct(
@@ -55,7 +53,7 @@ class UserCreation implements ProcessorInterface
         $this->em->flush();
 
         // Connect new Driver to User
-        $data->setOwnDriverId($driver);
+        $data->setOwnDriver($driver);
 
         $this->em->persist($data);
         $this->em->flush();
