@@ -15,6 +15,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Entity\Dealership;
 use App\Entity\Driver;
+use App\Entity\User;
 use App\Entity\CarOperation;
 use App\State\NewAppointmentProcessor;
 
