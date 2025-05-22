@@ -64,6 +64,10 @@ class Appointment
     #[ORM\ManyToMany(targetEntity: CarOperation::class)]
     private Collection $carOperations;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Vehicle $vehicle = null;
+
     public function __construct()
     {
         $this->carOperations = new ArrayCollection();
@@ -165,6 +169,18 @@ class Appointment
     public function removeCarOperation(CarOperation $carOperation): static
     {
         $this->carOperations->removeElement($carOperation);
+
+        return $this;
+    }
+
+    public function getVehicle(): ?Vehicle
+    {
+        return $this->vehicle;
+    }
+
+    public function setVehicle(?Vehicle $vehicle): static
+    {
+        $this->vehicle = $vehicle;
 
         return $this;
     }
