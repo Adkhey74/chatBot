@@ -29,20 +29,6 @@ class GeminiSuggestController extends AbstractController
      */
     private function loadServicesFromCsv(): array
     {
-        $services = [];
-        $csvPath = $this->params->get('kernel.project_dir') . '/data/iaData.csv';
-
-        if (($handle = fopen($csvPath, "r")) !== false) {
-            fgetcsv($handle); // skip header
-            while (($data = fgetcsv($handle)) !== false) {
-                $services[] = [
-                    'name' => $data[1] ?? '',
-                    'category' => $data[2] ?? '',
-                    'additionnal_help' => $data[3] ?? '',
-                    'additionnal_comment' => $data[4] ?? '',
-                    'time_unit' => $data[5] ?? '',
-                    'price' => $data[6] ?? '',
-                    'id' => $data[0] ?? '',
         $path = $this->params->get('kernel.project_dir') . '/data/iaData.csv';
         $out = [];
 
@@ -72,41 +58,6 @@ class GeminiSuggestController extends AbstractController
         $year = (int) ($vehicule['year'] ?? date('Y'));
         $ageMonths = (date('Y') - $year) * 12;
 
-        $validServices = [];
-
-        foreach ($this->services as $service) {
-            $name = strtolower($service['name']);
-
-            // Recherche des valeurs numériques en km et mois
-            preg_match_all('/(\d{1,3}(?:[.,\s]?\d{3})*)[ ]*km/i', $name, $kmMatches);
-            preg_match_all('/(\d+)[ ]*mois/i', $name, $moisMatches);
-
-            // Nettoyage et conversion
-            $kmValues = array_map(fn($v) => (int) str_replace(['.', ',', ' '], '', $v), $kmMatches[1]);
-            $maxKm = !empty($kmValues) ? max($kmValues) : null;
-
-            $moisValues = array_map('intval', $moisMatches[1]);
-            $maxMois = !empty($moisValues) ? max($moisValues) : null;
-
-            // Vérification des seuils atteints
-            $isKmValid = $maxKm !== null && $mileage >= $maxKm;
-            $isMoisValid = $maxMois !== null && $ageMonths >= $maxMois;
-
-            // Ne garder l'opération que si au moins un seuil est atteint
-            if ($isKmValid || $isMoisValid) {
-                $key = $service['category'] ?? 'default';
-                $score = max($maxKm ?? 0, $maxMois ?? 0);
-
-                if (!isset($validServices[$key]) || $score > $validServices[$key]['score']) {
-                    $validServices[$key] = [
-                        'service' => $service,
-                        'score' => $score,
-                    ];
-                }
-            }
-        }
-
-        return array_map(fn($entry) => $entry['service']['name'], array_values($validServices));
         $res = [];
         foreach ($this->services as $s) {
             $lower = strtolower($s['name']);
@@ -174,62 +125,6 @@ class GeminiSuggestController extends AbstractController
             $data = $response->toArray(false);
             $rawText = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
-            // Extraction des suggestions correspondant aux services connus
-            $suggestions = [];
-            foreach ($this->services as $service) {
-                if (stripos($text, $service['name']) !== false) {
-                    $suggestions[] = [
-                        'operation' => $service['name'],
-                        'category' => $service['category'],
-                        'additionnal_help' => $service['additionnal_help'],
-                        'additionnal_comment' => $service['additionnal_comment'],
-                        'time_unit' => $service['time_unit'],
-                        'price' => $service['price'],
-                        'id' => $service['id'],
-                    ];
-                    if (count($suggestions) >= 3) break;
-                }
-            }
-
-            if (empty($suggestions)) {
-                return $this->json(['message' => 'Aucune suggestion pertinente trouvée.']);
-            }
-
-            // Fusionner les deux sources
-            $mergedSuggestions = $suggestions;
-
-            foreach ($csvSuggestions as $csvName) {
-                $alreadyIncluded = false;
-                foreach ($mergedSuggestions as $item) {
-                    if (strcasecmp($item['operation'], $csvName) === 0) {
-                        $alreadyIncluded = true;
-                        break;
-                    }
-                }
-
-                if (!$alreadyIncluded) {
-                    foreach ($this->services as $service) {
-                        if (strcasecmp($service['name'], $csvName) === 0) {
-                            $mergedSuggestions[] = [
-                                'operation' => $service['name'],
-                                'category' => $service['category'],
-                                'additionnal_help' => $service['additionnal_help'],
-                                'additionnal_comment' => $service['additionnal_comment'],
-                                'time_unit' => $service['time_unit'],
-                                'price' => $service['price'],
-                                'id' => $service['id'],
-                            ];
-                            break;
-                        }
-                    }
-                }
-            }
-
-            return $this->json([
-                'type' => 'addons',
-                'ai_suggestions' => $mergedSuggestions,
-            ]);
-        } catch (\Exception $e) {
             // Nettoyage éventuel des ```json ... ```
             $rawText = trim($rawText);
             if (str_starts_with($rawText, '```')) {
