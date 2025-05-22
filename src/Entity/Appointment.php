@@ -3,15 +3,33 @@
 namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Put;
+use ApiPlatform\Metadata\Delete;
 use App\Repository\AppointmentRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Entity\Dealership;
+use App\Entity\Driver;
 use App\Entity\User;
 use App\Entity\CarOperation;
+use App\State\NewAppointmentProcessor;
 
 
 #[ORM\Entity(repositoryClass: AppointmentRepository::class)]
-#[ApiResource]
+#[ApiResource(
+    operations: [
+        new Get(),
+        new GetCollection(),
+        new Post(processor: NewAppointmentProcessor::class),
+        new Put(),
+        new Delete(),
+    ]
+)]
 class Appointment
 {
     #[ORM\Id]
@@ -19,23 +37,38 @@ class Appointment
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable:true)]
     private ?\DateTime $appointmentDate = null;
 
     #[ORM\Column(length: 255)]
     private ?string $status = null;
 
-    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\ManyToOne(targetEntity: Driver::class)]
     #[ORM\JoinColumn(nullable: false)]
-    private ?User $user = null;
-
-    #[ORM\ManyToOne(targetEntity: CarOperation::class)]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?CarOperation $carOperation = null;
+    private ?Driver $driver = null;
 
     #[ORM\ManyToOne(targetEntity: Dealership::class)]
     #[ORM\JoinColumn(nullable: false)]
     private ?Dealership $dealership = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $supplementaryInfos = null;
+
+    #[ORM\ManyToOne(inversedBy: 'appointments')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?User $user = null;
+
+    /**
+     * @var Collection<int, CarOperation>
+     */
+    #[ORM\ManyToMany(targetEntity: CarOperation::class)]
+    private Collection $carOperations;
+
+    public function __construct()
+    {
+        $this->carOperations = new ArrayCollection();
+    }
+
 
 
     public function getId(): ?int
@@ -48,7 +81,7 @@ class Appointment
         return $this->appointmentDate;
     }
 
-    public function setAppointmentDate(\DateTime $appointmentDate): static
+    public function setAppointmentDate(?\DateTime $appointmentDate): static
     {
         $this->appointmentDate = $appointmentDate;
 
@@ -66,26 +99,15 @@ class Appointment
 
         return $this;
     }
-    public function getUser(): ?User
+    public function getDriver(): ?Driver
     {
-        return $this->user;
+        return $this->driver;
     }
 
-    public function setUser(?User $user): static
+    public function setDriver(?Driver $driver): static
     {
-        $this->user = $user;
+        $this->driver = $driver;
 
-        return $this;
-    }
-    public function getCarOperation(): ?CarOperation
-    {
-        return $this->carOperation;
-    }
-    
-    public function setCarOperation(?CarOperation $carOperation): static
-    {
-        $this->carOperation = $carOperation;
-    
         return $this;
     }
     public function getDealership(): ?Dealership
@@ -98,6 +120,53 @@ class Appointment
         $this->dealership = $dealership;
         return $this;
     }
-    
+
+    public function getSupplementaryInfos(): ?string
+    {
+        return $this->supplementaryInfos;
+    }
+
+    public function setSupplementaryInfos(?string $supplementaryInfos): static
+    {
+        $this->supplementaryInfos = $supplementaryInfos;
+
+        return $this;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CarOperation>
+     */
+    public function getCarOperations(): Collection
+    {
+        return $this->carOperations;
+    }
+
+    public function addCarOperation(CarOperation $carOperation): static
+    {
+        if (!$this->carOperations->contains($carOperation)) {
+            $this->carOperations->add($carOperation);
+        }
+
+        return $this;
+    }
+
+    public function removeCarOperation(CarOperation $carOperation): static
+    {
+        $this->carOperations->removeElement($carOperation);
+
+        return $this;
+    }
     
 }
